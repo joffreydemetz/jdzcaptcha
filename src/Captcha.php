@@ -1,14 +1,16 @@
 <?php
-namespace Captcha;
 
-use Captcha\CaptchaData;
-use Captcha\Exception\CaptchaValidationException;
+namespace JDZ\Captcha;
+
+use JDZ\Captcha\CaptchaApp;
+use JDZ\Captcha\CaptchaData;
+use JDZ\Captcha\Exception\CaptchaValidationException;
 
 class Captcha
 {
   public CaptchaApp $app;
   public CaptchaData $data;
-  
+
   /**
    * Initializes the state of a captcha. The amount of icons shown in the captcha image, their positions,
    * which icon is correct and which icon identifiers should be used will all be determined in this function.
@@ -21,31 +23,31 @@ class Captcha
   public function getCaptchaData(string $theme, int $identifier): string
   {
     $this->createCaptchaData($identifier);
-    
+
     // Check if the max attempts limit has been reached and a timeout is active.
     // If reached, return an error and the remaining time.
-    if ( $tOut = $this->data->get('attemptsTimeout') ){
-      if ( time() <= $tOut ){
+    if ($tOut = $this->data->get('attemptsTimeout')) {
+      if (time() <= $tOut) {
         return base64_encode(json_encode([
-          'error' => 1, 
+          'error' => 1,
           'data' => ($tOut - time()) * 1000 // remaining time.
         ]));
       }
-      
+
       $this->data->set('attemptsTimeout', 0);
       $this->data->set('attempts', 0);
     }
-    
+
     $minIconAmount = $this->app->config->getInt('image.amount.min');
     $maxIconAmount = $this->app->config->getInt('image.amount.max');
-    
+
     // Determine the number of icons to add to the image.
     $iconAmount = $minIconAmount;
     // if ( $minIconAmount !== $maxIconAmount ){
-    if ( $minIconAmount <> $maxIconAmount ){
+    if ($minIconAmount <> $maxIconAmount) {
       $iconAmount = mt_rand($minIconAmount, $maxIconAmount);
     }
-    
+
     // Number of times the correct image will be placed onto the placeholder.
     // $sizes = $this->app->config->getArray('sizes');
     $correctIconAmount = mt_rand(1, $this->app->config->getArray('sizes')[$iconAmount]['correctMax']);
@@ -100,105 +102,105 @@ class Captcha
       'attempts' => $attemptsCount,
     ]);
     // debug($this->data->all());
-    $this->app->request->getSession()->set($this->app->nS.'.'.$this->data->id, $this->data->all());
-    
-    return base64_encode(json_encode([ 'id' => $identifier ]));
+    $this->app->request->getSession()->set($this->app->nS . '.' . $this->data->id, $this->data->all());
+
+    return base64_encode(json_encode(['id' => $identifier]));
   }
 
   public function validate(array $post): bool
   {
     $fields = $this->app->config->getArray('fields');
-    
-    if ( empty($post) ){
+
+    if (empty($post)) {
       throw new CaptchaValidationException($this->app->config->get('messages.empty_form'), 3);
     }
-    
-    if ( !isset($post[$fields['id']]) || !is_numeric($post[$fields['id']]) ){
+
+    if (!isset($post[$fields['id']]) || !is_numeric($post[$fields['id']])) {
       throw new CaptchaValidationException($this->app->config->get('messages.invalid_id'), 4);
     }
-    
-    if ( !isset($post[$fields['honeypot']]) || !empty($post[$fields['honeypot']]) ){
+
+    if (!isset($post[$fields['honeypot']]) || !empty($post[$fields['honeypot']])) {
       throw new CaptchaValidationException($this->app->config->get('messages.invalid_id'), 5);
     }
-    
+
     $token = (isset($post[$fields['token']])) ? $post[$fields['token']] : null;
-    
-    if ( !$this->validateToken($token) ){
+
+    if (!$this->validateToken($token)) {
       throw new CaptchaValidationException($this->app->config->get('messages.form_token'), 6);
     }
-    
+
     $identifier = $post[$fields['id']];
-    
-    if ( false === $this->app->request->getSession()->has($this->app->nS.'.'.$identifier) ){
+
+    if (false === $this->app->request->getSession()->has($this->app->nS . '.' . $identifier)) {
       throw new CaptchaValidationException($this->app->config->get('messages.invalid_id'), 4);
     }
-    
+
     $this->createCaptchaData($identifier);
 
     // Check if the selection field is set.
-    if ( empty($post[$fields['selection']]) || !is_string($post[$fields['selection']]) ){
+    if (empty($post[$fields['selection']]) || !is_string($post[$fields['selection']])) {
       throw new CaptchaValidationException($this->app->config->get('messages.no_selection'), 2);
     }
-    
+
     $icons = $this->data->get('icons');
-    
+
     // Parse the selection.
     $selection = explode(',', $post[$fields['selection']]);
-    if ( count($selection) === 3 ){
+    if (count($selection) === 3) {
       $clickedPosition = $this->determineClickedIcon($selection[0], $selection[1], $selection[2], count($icons));
     }
 
     // If the clicked position matches the stored position, the form can be submitted.
-    if ( false === $this->data->get('completed') || !isset($clickedPosition) || $icons[$clickedPosition] !== $this->data->get('correctId') ){
+    if (false === $this->data->get('completed') || !isset($clickedPosition) || $icons[$clickedPosition] !== $this->data->get('correctId')) {
       throw new CaptchaValidationException($this->app->config->get('messages.wrong_icon'), 1);
     }
-    
+
     // Invalidate the captcha to prevent resubmission of a form on the same captcha.
-    $this->app->request->getSession()->remove($this->app->nS.'.'.$identifier);
-    
+    $this->app->request->getSession()->remove($this->app->nS . '.' . $identifier);
+
     return true;
   }
-  
+
   public function setSelectedAnswer(array $payload): bool
   {
-    if ( empty($payload) ){
+    if (empty($payload)) {
       return false;
     }
-    
-    if ( !isset($payload['i']) || !isset($payload['x']) || !isset($payload['y']) || !isset($payload['w']) ){
+
+    if (!isset($payload['i']) || !isset($payload['x']) || !isset($payload['y']) || !isset($payload['w'])) {
       return false;
     }
-    
+
     $this->createCaptchaData($payload['i']);
-    
+
     $icons = $this->data->get('icons');
-    
+
     $clickedPosition = $this->determineClickedIcon($payload['x'], $payload['y'], $payload['w'], count($icons));
-    
+
     // Check if the selection is set and matches the position from the session.
-    if ( $icons[$clickedPosition] === $this->data->get('correctId') ){
+    if ($icons[$clickedPosition] === $this->data->get('correctId')) {
       $this->data->sets([
         'attempts' => 0,
         'attemptsTimeout' => 0,
         'completed' => true,
       ]);
-      
-      $this->app->request->getSession()->set($this->app->nS.'.'.$this->data->id, $this->data->all());
+
+      $this->app->request->getSession()->set($this->app->nS . '.' . $this->data->id, $this->data->all());
       return true;
-    } 
-    
+    }
+
     $this->data->set('completed', false);
 
     $attempts = $this->data->get('attempts');
     $attempts += 1;
     $this->data->set('attempts', $attempts);
-    
+
     // If the max amount has been reached, set a timeout (if set).
-    if ( $attempts === $this->app->config->getInt('attempts.amount') && $this->app->config->getInt('attempts.timeout') > 0 ){
+    if ($attempts === $this->app->config->getInt('attempts.amount') && $this->app->config->getInt('attempts.timeout') > 0) {
       $this->data->set('attemptsTimeout',  time() + $this->app->config->getInt('attempts.timeout'));
     }
-    
-    $this->app->request->getSession()->set($this->app->nS.'.'.$this->data->id, $this->data->all());
+
+    $this->app->request->getSession()->set($this->app->nS . '.' . $this->data->id, $this->data->all());
     return false;
   }
 
@@ -209,40 +211,40 @@ class Captcha
    *
    * The image will only be rendered once as a PNG, and be destroyed right after rendering.
    */
-  public function getImage(?int $identifier=null)
+  public function getImage(?int $identifier = null)
   {
     // Check if the captcha id is set
     if (isset($identifier) && $identifier > -1) {
       // Initialize the session.
       $this->createCaptchaData($identifier);
-      
+
       // Check the amount of times an icon has been requested
-      if ( true === $this->data->get('requested') ){
+      if (true === $this->data->get('requested')) {
         header('HTTP/1.1 403 Forbidden');
         exit;
       }
 
-      if ( !$this->data->get('correctId') ){
+      if (!$this->data->get('correctId')) {
         header('HTTP/1.1 403 Forbidden');
         exit;
       }
-      
+
       $this->data->set('requested', true);
-      $this->app->request->getSession()->set($this->app->nS.'.'.$this->data->id, $this->data->all());
-      
+      $this->app->request->getSession()->set($this->app->nS . '.' . $this->data->id, $this->data->all());
+
       $placeholder = realpath($this->app->config->get('iconPath') . DIRECTORY_SEPARATOR . 'placeholder.png');
       $iconsDirectoryPath = $this->app->config->get('iconPath') . DIRECTORY_SEPARATOR . $this->app->config->get('iconSet') . DIRECTORY_SEPARATOR;
-      
+
       // Check if the placeholder icon exists.
-      if ( is_file($placeholder) ){
+      if (is_file($placeholder)) {
         // Format the path to the icon directory.
-        $iconPath = $iconsDirectoryPath . $this->app->config->getArray('variants.'.$this->data->get('mode'))['name'] . DIRECTORY_SEPARATOR;
-        
+        $iconPath = $iconsDirectoryPath . $this->app->config->getArray('variants.' . $this->data->get('mode'))['name'] . DIRECTORY_SEPARATOR;
+
         // Generate the captcha image.
         $generatedImage = $this->generateImage($iconPath, $placeholder);
-        
+
         return $generatedImage;
-        
+
         // Set the content type header to the PNG MIME-type.
         header('Content-type: image/png');
 
@@ -251,16 +253,16 @@ class Captcha
         header('Cache-Control: no-cache, no-store, must-revalidate');
         header('Cache-Control: post-check=0, pre-check=0', false);
         header('Pragma: no-cache');
-        
+
         // Show the image and exit the code
         imagepng($generatedImage);
         imagedestroy($generatedImage);
       }
     }
-    
+
     return false;
   }
-  
+
   /**
    * Returns a generated image containing the icons for the current captcha instance. The icons will be copied
    * onto a placeholder image, located at the $placeholderPath. The icons will be randomly rotated and flipped
@@ -281,14 +283,14 @@ class Captcha
       // debug($id.' = '.realpath($iconPath . 'icon-' . $id . '.png'), false);
       $iconImages[$id] = imagecreatefrompng(realpath($iconPath . 'icon-' . $id . '.png'));
     }
-    
+
     // Image pixel information.
     $iconCount = count($this->data->get('icons'));
     $iconSize = $this->app->config->getArray('sizes')[$iconCount]['size'];
     $iconOffset = (int)((($this->app->config->getInt('container.width') / $iconCount) - 30) / 2);
     $iconOffsetAdd = (int)(($this->app->config->getInt('container.width') / $iconCount) - $iconSize);
     $iconLineSize = (int)($this->app->config->getInt('container.width') / $iconCount);
-    
+
     // Options.
     $rotateEnabled = $this->app->config->getBool('image.rotate');
     $flipHorizontally = $this->app->config->getBool('image.flip.horizontally');
@@ -296,27 +298,27 @@ class Captcha
     $borderEnabled = $this->app->config->getBool('image.border');
 
     // Create the border color, if enabled.
-    if ( $borderEnabled ){
+    if ($borderEnabled) {
       // Determine border color.
       try {
-        $color = $this->app->config->getArray('variants.'.$this->data->get('mode'))['border'];
-      } catch(\Exception $e){
+        $color = $this->app->config->getArray('variants.' . $this->data->get('mode'))['border'];
+      } catch (\Exception $e) {
         $color = $this->app->config->getArray('container.border');
       }
-      
-      if ( count($color) <> 3 ){
-        $color = [ 240, 240, 240 ];
+
+      if (count($color) <> 3) {
+        $color = [240, 240, 240];
       }
-      
+
       $borderColor = imagecolorallocate($placeholder, $color[0], $color[1], $color[2]);
     }
-    
+
     // Copy the icons onto the placeholder.
     $xOffset = $iconOffset;
     for ($i = 0; $i < $iconCount; $i++) {
       // Get the icon image from the array. Use position to get the icon ID.
       $icon = $iconImages[$this->data->get('icons')[$i + 1]];
-    // debug($icon);
+      // debug($icon);
 
       // Rotate icon, if enabled.
       if ($rotateEnabled) {
@@ -335,13 +337,13 @@ class Captcha
       if ($flipVertically && mt_rand(1, 2) === 1) {
         imageflip($icon, \IMG_FLIP_VERTICAL);
       }
-      
+
       // Copy the icon onto the placeholder.
       imagecopy($placeholder, $icon, ($iconSize * $i) + $xOffset, 10, 0, 0, 30, 30);
       $xOffset += $iconOffsetAdd;
-      
+
       // Add the vertical separator lines to the placeholder, if enabled.
-      if ( $borderEnabled && $i > 0 ){
+      if ($borderEnabled && $i > 0) {
         imageline($placeholder, $iconLineSize * $i, 0, $iconLineSize * $i, 50, $borderColor);
       }
     }
@@ -349,16 +351,16 @@ class Captcha
 
     return $placeholder;
   }
-  
+
   /**
    * Tries to load/initialize a session with the given captcha identifier.
    * When an existing session is found, it's data will be loaded, else a new session will be created.
    */
-  protected function createCaptchaData(int $identifier=0)
+  protected function createCaptchaData(int $identifier = 0)
   {
-    $this->data = new CaptchaData($identifier, $this->app->request->getSession()->get($this->app->nS.'.'.$identifier, []));
+    $this->data = new CaptchaData($identifier, $this->app->request->getSession()->get($this->app->nS . '.' . $identifier, []));
   }
-  
+
   /**
    * Validates the global captcha session token against the given payload token and sometimes against a header token
    * as well. All the given tokens must match the global captcha session token to pass the check. This function
@@ -371,25 +373,25 @@ class Captcha
    * value is NULL. When the value is set to anything else other than NULL, the given value will be checked against
    * the captcha session token.
    */
-  public function validateToken(string $payloadToken, ?string $headerToken=null): bool
+  public function validateToken(string $payloadToken, ?string $headerToken = null): bool
   {
     // Only validate if the token option is enabled.
-    if ( true === $this->app->config->getBool('token') ){
-      $sessionToken = $this->app->request->getSession()->get($this->app->nS.'.csrf');
-      
+    if (true === $this->app->config->getBool('token')) {
+      $sessionToken = $this->app->request->getSession()->get($this->app->nS . '.csrf');
+
       // If the token is empty but the option is enabled, the token was never requested.
-      if ( empty($sessionToken) ){
+      if (empty($sessionToken)) {
         return false;
       }
-      
+
       // Validate the payload and header token (if set) against the session token.
-      if ( null !== $headerToken ){
+      if (null !== $headerToken) {
         return $sessionToken === $payloadToken && $sessionToken === $headerToken;
       }
-      
+
       return $sessionToken === $payloadToken;
     }
-    
+
     return true;
   }
 
@@ -424,14 +426,14 @@ class Captcha
    * @return int[] The number of times an icon should be rendered onto the captcha image. Each value in the returned
    * array represents a new unique icon.
    */
-  protected function calculateIconAmounts(int $iconCount, int $smallestIconCount=1): array
+  protected function calculateIconAmounts(int $iconCount, int $smallestIconCount = 1): array
   {
     $remainder = $iconCount - $smallestIconCount;
     $remainderDivided = $remainder / 2;
     $pickDivided = mt_rand(1, 2) === 1; // 50/50 chance.
 
     // If division leads to decimal.
-    if ( fmod($remainderDivided, 1) !== 0.0 && $pickDivided ){
+    if (fmod($remainderDivided, 1) !== 0.0 && $pickDivided) {
       $left = floor($remainderDivided);
       $right = ceil($remainderDivided);
 
@@ -439,13 +441,12 @@ class Captcha
       if ($left > $smallestIconCount && $right > $smallestIconCount) {
         return [$left, $right];
       }
-    } 
-    elseif ($pickDivided === true && $remainderDivided > $smallestIconCount) {
+    } elseif ($pickDivided === true && $remainderDivided > $smallestIconCount) {
       // If no decimals: only return the divided numbers if it is larger than the smallest number.
       return [$remainderDivided, $remainderDivided];
     }
-    
+
     // Return the whole remainder.
-    return [ $remainder ];
+    return [$remainder];
   }
 }

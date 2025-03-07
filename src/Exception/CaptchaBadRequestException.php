@@ -1,8 +1,7 @@
 <?php
-namespace Captcha\Exception;
 
-use Captcha\Exception\CaptchaException;
+namespace JDZ\Captcha\Exception;
 
-class CaptchaBadRequestException extends CaptchaException
-{
-}
+use JDZ\Captcha\Exception\CaptchaException;
+
+class CaptchaBadRequestException extends CaptchaException {}
