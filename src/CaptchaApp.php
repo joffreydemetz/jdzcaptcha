@@ -31,7 +31,7 @@ class CaptchaApp
   {
     $this->nS = $this->config->get('nameSpace');
 
-    $this->token = new \JDZ\Captcha\CaptchaToken($this->config->getBool('token'), $this->request->getSession()->get($this->nS . '.csrf'));
+    $this->token = new CaptchaToken($this->config->getBool('token'), $this->request->getSession()->get($this->nS . '.csrf'));
 
     $this->request->getSession()->set($this->nS . '.csrf', $this->token->make());
 
@@ -43,8 +43,6 @@ class CaptchaApp
 
   public function process(): void
   {
-    // $caller = null;
-
     try {
       $path = $this->request->getPathInfo();
       $method = $this->request->getMethod();
@@ -67,7 +65,7 @@ class CaptchaApp
           if (!($_payload = $this->request->query->get('payload'))) {
             throw new CaptchaBadRequestException('Missing payload');
           }
-          // debug(urldecode($_payload));
+
           $payload = $this->decodePayload(urldecode($_payload));
           if (!isset($payload['i']) || !is_numeric($payload['i'])) {
             throw new CaptchaBadRequestException('Error validating the payload');
@@ -133,24 +131,6 @@ class CaptchaApp
 
         throw new CaptchaBadRequestException('Bad controller request');
       }
-
-      /* if ( '/captcha/validate/' === $path ){
-        // $caller = 'curl';
-        // $this->response(json_encode([ 'yo' => true ]), Response::HTTP_OK, [ 'content-type' => 'application/json' ]);
-        
-        if ( 'POST' === $method ){
-          if ( !($postedData=$this->request->request->all()) ){
-            throw new CaptchaBadRequestException('Form is empty !');
-            // $this->jsonResponse(new CaptchaResponse(false, 100, 'Form is empty !'), Response::HTTP_BAD_REQUEST, [ 'content-type' => 'application/json' ]);
-          }
-          
-          if ( true === $this->captcha->validate($postedData) ){
-            $this->jsonResponse(new CaptchaResponse(true), Response::HTTP_OK, [ 'content-type' => 'application/json' ]);
-          }
-        }
-        
-        throw new CaptchaBadRequestException('Bad controller request');
-      } */
     } catch (CaptchaBadRequestException $e) {
 
       $this->response('', Response::HTTP_BAD_REQUEST, []);
@@ -201,46 +181,17 @@ class CaptchaApp
 
   protected function checkIconSet(int $tries = 0): void
   {
-    if ($tries > 5) {
+    $path = realpath($this->config->get('iconPath')) . '/';
+
+    if (!is_dir($path)) {
       throw new CaptchaException('JdzCaptcha icon set not found in ' . $this->config->get('iconPath'));
-    }
-
-    $path = realpath($this->config->get('iconPath')) . DIRECTORY_SEPARATOR;
-
-    if (!is_dir($path)) {
-      $this->checkIconSet(10);
-      return;
-    }
-
-    $path .= $this->config->get('iconSet') . DIRECTORY_SEPARATOR;
-
-    if (!is_dir($path)) {
-      $this->config->set('iconSet', 'default');
-      $this->config->set('iconTheme', 'light');
-      $this->checkIconSet($tries++);
-      return;
-    }
-
-    $variant = $this->config->getArray('variants.' . $this->config->get('iconTheme'));
-    if (empty($variant['name'])) {
-      $this->config->set('iconTheme', 'light');
-      $this->checkIconSet($tries++);
-      return;
-    }
-
-    $path .= $variant['name'] . DIRECTORY_SEPARATOR;
-
-    if (!is_dir($path)) {
-      $this->config->set('iconTheme', 'light');
-      $this->checkIconSet($tries++);
-      return;
     }
 
     $fi = new \FilesystemIterator($path, \FilesystemIterator::SKIP_DOTS);
     $count = \iterator_count($fi);
     if ($count < 10) {
-      $this->config->set('iconSet', 'default');
-      $this->config->set('iconTheme', 'light');
+      $this->config->set('theme', 'lc');
+      $this->config->set('variant', 'light');
       $this->checkIconSet($tries++);
       return;
     }

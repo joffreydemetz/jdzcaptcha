@@ -1,0 +1,8 @@
+import { Captcha } from '{{PREFIX}}lib/js/captcha.js';
+
+import '{{PREFIX}}lib/jdzcaptcha.less';
+
+import '{{PREFIX}}lib/placeholder.png';
+{{ICONS}}
+
+export default Captcha;

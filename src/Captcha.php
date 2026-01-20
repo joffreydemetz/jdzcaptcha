@@ -232,31 +232,14 @@ class Captcha
       $this->data->set('requested', true);
       $this->app->request->getSession()->set($this->app->nS . '.' . $this->data->id, $this->data->all());
 
-      $placeholder = realpath($this->app->config->get('iconPath') . DIRECTORY_SEPARATOR . 'placeholder.png');
-      $iconsDirectoryPath = $this->app->config->get('iconPath') . DIRECTORY_SEPARATOR . $this->app->config->get('iconSet') . DIRECTORY_SEPARATOR;
+      $placeholder = realpath($this->app->config->get('placeholder'));
+      $iconPath = $this->app->config->get('iconPath') . '/';
 
       // Check if the placeholder icon exists.
       if (is_file($placeholder)) {
-        // Format the path to the icon directory.
-        $iconPath = $iconsDirectoryPath . $this->app->config->getArray('variants.' . $this->data->get('mode'))['name'] . DIRECTORY_SEPARATOR;
-
         // Generate the captcha image.
         $generatedImage = $this->generateImage($iconPath, $placeholder);
-
         return $generatedImage;
-
-        // Set the content type header to the PNG MIME-type.
-        header('Content-type: image/png');
-
-        // Disable caching of the image.
-        header('Expires: 0');
-        header('Cache-Control: no-cache, no-store, must-revalidate');
-        header('Cache-Control: post-check=0, pre-check=0', false);
-        header('Pragma: no-cache');
-
-        // Show the image and exit the code
-        imagepng($generatedImage);
-        imagedestroy($generatedImage);
       }
     }
 
@@ -272,15 +255,12 @@ class Captcha
    */
   public function generateImage(string $iconPath, string $placeholderPath): mixed
   {
-    // debug($placeholderPath, false);
-    // debug($iconPath, false);
     // Prepare the placeholder image.
     $placeholder = imagecreatefrompng($placeholderPath);
 
     // Prepare the icon images.
     $iconImages = [];
     foreach ($this->data->get('iconIds') as $id) {
-      // debug($id.' = '.realpath($iconPath . 'icon-' . $id . '.png'), false);
       $iconImages[$id] = imagecreatefrompng(realpath($iconPath . 'icon-' . $id . '.png'));
     }
 

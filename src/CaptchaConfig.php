@@ -19,8 +19,9 @@ class CaptchaConfig extends jData
     'token' => true,
     'nameSpace' => 'jdzcaptcha',
     'iconPath' => '',
-    'iconSet' => 'streamline',
-    'iconsVariant' => 'light',
+    'placeholder' => '',
+    'theme' => 'lc',
+    'variant' => 'light',
     'nbIcons' => 0,
     'path' => '/captcha/request/',
     'loaderPath' => '/captcha/load/',
@@ -67,7 +68,8 @@ class CaptchaConfig extends jData
   {
     $this->defaults = new jData();
     $this->defaults->sets(self::DEFAULTS);
-
+    $this->defaults->set('iconPath', dirname(__DIR__) . '/assets/icons/');
+    $this->defaults->set('placeholder', dirname(__DIR__) . '/assets/placeholder.png');
     $this->sets(self::DEFAULTS);
   }
 
@@ -91,12 +93,10 @@ class CaptchaConfig extends jData
   public function getJsConfig(): array
   {
     $jsConfigVars = [
-      // -- strings
-      // 'lang',
       'path',
-      // 'loader',
       'fontFamily',
-      'iconsVariant',
+      'theme',
+      'variant',
       'credits',
       'fields.selection',
       'fields.id',
@@ -117,7 +117,6 @@ class CaptchaConfig extends jData
       'security.loadingAnimationDelay',
       'security.invalidateTime',
       // -- booleans
-      // 'debug',
       'token',
       'security.hoverDetection',
       'security.enableInitialMessage',

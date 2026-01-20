@@ -1,8 +1,9 @@
 composer.lock
+composer.json
 package-lock.json
-package.json
 build/*
 dist/*
 files/
 node_modules/
+src/
 vendor/

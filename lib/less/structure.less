@@ -1,0 +1,259 @@
+.jdzc {
+    width: 99%;
+    max-width: 330px;
+    min-height: 50px;
+    height: auto;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 8px;
+    font-family: inherit;
+    text-shadow: none;
+    line-height: 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    user-select: none;
+
+    * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    *::selection {
+        background: none !important;
+    }
+
+    a {
+        text-decoration: none;
+    }
+
+    .jdzc-box {
+        width: 100%;
+        display: block;
+    }
+
+    .jdzc-box-title {
+        font-size: 20px;
+        font-weight: 700;
+        text-transform: uppercase;
+        display: inline-block;
+        width: 100%;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 8px;
+    }
+
+    .jdzc-box-subtitle {
+        font-size: 12px;
+        display: inline-block;
+        width: 100%;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 35px;
+    }
+
+    .jdzc-box-h {
+        height: auto;
+        padding: 0 10px;
+        display: block;
+
+        span {
+            padding: 6px 0;
+            display: block;
+            text-align: center;
+            font-size: 11px;
+            line-height: 14px;
+            font-weight: 700;
+            cursor: default;
+
+            &::selection {
+                background: none !important;
+            }
+        }
+    }
+
+    .jdzc-box-b {
+        display: block;
+        overflow: hidden;
+        position: relative;
+        height: 50px;
+        min-height: 50px;
+        padding: 2px 4px;
+        text-align: center;
+        box-sizing: initial;
+    }
+
+    .jdzc-box-icons {
+        position: relative;
+        height: 50px;
+        background-repeat: no-repeat;
+        background-position: 50% 50%;
+        z-index: 1;
+    }
+
+    .jdzc-box-selection {
+        position: absolute;
+        left: 0;
+        top: 2px;
+        bottom: 0;
+        right: 0;
+        margin: 2px 4px;
+        z-index: 999;
+        cursor: none;
+        height: 50px;
+
+        >i {
+            content: "";
+            width: 14px;
+            height: 14px;
+            border-radius: 100%;
+            background: #52b3d9;
+            position: absolute;
+            display: none;
+        }
+    }
+
+    .jdzc-box-icons,
+    .jdzc-box-selection {
+        width: 100%;
+        max-width: 320px;
+        margin: 0 auto;
+    }
+
+    .jdzc-box-info {
+        position: absolute;
+        right: 6px;
+        bottom: 4px;
+        font-size: 9px;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+    .jdzc-box-b {
+        .jdzc-loader {
+            margin: auto;
+            position: absolute;
+            width: 34px;
+            height: 34px;
+            border-radius: 100%;
+            border: 6px solid #52b3d9;
+            z-index: 10;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            box-sizing: border-box;
+            animation: jdzc-breath 2s infinite ease-in-out;
+        }
+
+        &.jdzc-opacity {
+            >div:not(.jdzc-loader) {
+                opacity: .15;
+                cursor: default;
+                pointer-events: none;
+
+                &:after,
+                &:hover:after {
+                    content: none
+                }
+            }
+        }
+    }
+
+    .jdzc-box-checkmark {
+        width: 28px;
+        height: 28px;
+        position: absolute;
+        top: 13px;
+        left: 15px;
+        background-image: url("data: image/svg+xml,%3C?xml version='1.0' encoding='UTF-8'?%3E%3Csvg enable-background='new 0 0 98.5 98.5' version='1.1' viewBox='0 0 98.5 98.5' xml: space='preserve' xmlns='http: //www.w3.org/2000/svg'%3E%3Cpath class='checkmark' d='M81.7,17.8C73.5,9.3,62,4,49.2,4 C24.3,4,4,24.3,4,49.2s20.3,45.2,45.2,45.2s45.2-20.3,45.2-45.2c0-8.6-2.4-16.6-6.5-23.4l0,0L45.6,68.2L24.7,47.3' fill='none' stroke-miterlimit='10' stroke-width='8' stroke='none'/%3E%3C/svg%3E ");
+    }
+
+    .jdzc-box-f {
+        display: block !important;
+        font-size: 9px;
+        padding: 3px;
+        cursor: default;
+        text-align: center;
+
+        >span a {
+            text-decoration: none;
+            transition: color .1s linear;
+            text-align: center;
+
+            &:hover {
+                transition: color .1s linear;
+            }
+        }
+    }
+
+    .jdzc-box-f-hide {
+        visibility: hidden;
+    }
+
+    .jdzc-fields {
+        display: none;
+        visibility: hidden;
+
+        input[type="text"] {
+            display: none;
+            visibility: hidden;
+        }
+    }
+
+    &.jdzc-init {
+        transition: background 150ms linear;
+
+        .jdzc-box-b {
+            cursor: pointer;
+        }
+
+        .jdzc-box-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 100%;
+            border: 6px solid @jdz-color;
+            position: absolute;
+            top: 13px;
+            left: 15px;
+            transition: opacity .1s linear;
+            animation: jdzc-breath 5s infinite linear;
+        }
+
+        // .jdzc-box-circle--speed {
+        // animation-duration: 2s;
+        // }
+
+        &:hover {
+            transition: background 150ms linear;
+        }
+
+        &:hover .jdzc-box-circle {
+            opacity: .75;
+            transition: opacity .1s linear;
+        }
+    }
+
+    &.jdzc-success,
+    &.jdzc-error {
+        cursor: default;
+    }
+
+    &.jdzc-init .jdzc-box-title,
+    &.jdzc-success .jdzc-box-title {
+        font-size: 15px;
+        // font-weight: 700;
+        top: 19px;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-right: 20px;
+        padding-left: 60px;
+    }
+}
