@@ -34,7 +34,7 @@ class CaptchaToken
     return $this->value;
   }
 
-  public function validate(string $payloadToken, ?string $headerToken = null): bool
+  public function validate(?string $payloadToken, ?string $headerToken = null): bool
   {
     if (false === $this->active) {
       return true;
