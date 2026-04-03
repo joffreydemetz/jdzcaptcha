@@ -60,6 +60,12 @@ class CaptchaConfig extends jData
     'fields.id' => '_jdzc-hf-id',
     'fields.honeypot' => '_jdzc-hf-hp',
     'fields.token' => '_jdzc-token',
+    'sizes' => [
+      5 => ['size' => 30, 'correctMax' => 1],
+      6 => ['size' => 30, 'correctMax' => 2],
+      7 => ['size' => 30, 'correctMax' => 2],
+      8 => ['size' => 30, 'correctMax' => 2],
+    ],
   ];
 
   private jData $defaults;
@@ -68,9 +74,11 @@ class CaptchaConfig extends jData
   {
     $this->defaults = new jData();
     $this->defaults->sets(self::DEFAULTS);
-    $this->defaults->set('iconPath', dirname(__DIR__) . '/assets/icons/');
+    $this->defaults->set('iconPath', dirname(__DIR__) . '/assets/icons');
     $this->defaults->set('placeholder', dirname(__DIR__) . '/assets/placeholder.png');
     $this->sets(self::DEFAULTS);
+    $this->set('iconPath', dirname(__DIR__) . '/assets/icons');
+    $this->set('placeholder', dirname(__DIR__) . '/assets/placeholder.png');
   }
 
   public function loadFromFile(string $path)

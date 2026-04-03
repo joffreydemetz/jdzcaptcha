@@ -1,13 +1,13 @@
 {
     "name": "jdz/jdzcaptcha",
     "type": "library",
-    "description": "JDZ icon Captcha",
+    "description": "JDZ icon Captcha package for PHP",
     "keywords": [
         "JDZ",
         "package",
         "captcha"
     ],
-    "homepage": "https://joffreydemetz.com/jdzcaptcha",
+    "homepage": "https://jdz.joffreydemetz.com/jdzcaptcha",
     "license": "proprietary",
     "authors": [
         {
@@ -19,13 +19,27 @@
     ],
     "require": {
         "php": ">=8.2",
+        "ext-gd": "*",
         "jdz/data": "^2.0",
-        "symfony/http-foundation": "^7.4",
         "symfony/yaml": "^7.4"
+    },
+    "suggest": {
+        "symfony/http-foundation": "Required to use SymfonySession adapter"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
     },
     "autoload": {
         "psr-4": {
             "JDZ\\Captcha\\": "src"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JDZ\\Captcha\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --color=always --testdox"
     }
 }

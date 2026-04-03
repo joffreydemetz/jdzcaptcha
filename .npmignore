@@ -1,9 +1,0 @@
-composer.lock
-composer.json
-package-lock.json
-build/*
-dist/*
-files/
-node_modules/
-src/
-vendor/
