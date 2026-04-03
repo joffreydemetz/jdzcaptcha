@@ -19,8 +19,9 @@ class CaptchaConfig extends jData
     'token' => true,
     'nameSpace' => 'jdzcaptcha',
     'iconPath' => '',
-    'iconSet' => 'streamline',
-    'iconsVariant' => 'light',
+    'placeholder' => '',
+    'theme' => 'lc',
+    'variant' => 'light',
     'nbIcons' => 0,
     'path' => '/captcha/request/',
     'loaderPath' => '/captcha/load/',
@@ -59,6 +60,12 @@ class CaptchaConfig extends jData
     'fields.id' => '_jdzc-hf-id',
     'fields.honeypot' => '_jdzc-hf-hp',
     'fields.token' => '_jdzc-token',
+    'sizes' => [
+      5 => ['size' => 30, 'correctMax' => 1],
+      6 => ['size' => 30, 'correctMax' => 2],
+      7 => ['size' => 30, 'correctMax' => 2],
+      8 => ['size' => 30, 'correctMax' => 2],
+    ],
   ];
 
   private jData $defaults;
@@ -67,8 +74,11 @@ class CaptchaConfig extends jData
   {
     $this->defaults = new jData();
     $this->defaults->sets(self::DEFAULTS);
-
+    $this->defaults->set('iconPath', dirname(__DIR__) . '/assets/icons');
+    $this->defaults->set('placeholder', dirname(__DIR__) . '/assets/placeholder.png');
     $this->sets(self::DEFAULTS);
+    $this->set('iconPath', dirname(__DIR__) . '/assets/icons');
+    $this->set('placeholder', dirname(__DIR__) . '/assets/placeholder.png');
   }
 
   public function loadFromFile(string $path)
@@ -91,12 +101,10 @@ class CaptchaConfig extends jData
   public function getJsConfig(): array
   {
     $jsConfigVars = [
-      // -- strings
-      // 'lang',
       'path',
-      // 'loader',
       'fontFamily',
-      'iconsVariant',
+      'theme',
+      'variant',
       'credits',
       'fields.selection',
       'fields.id',
@@ -117,7 +125,6 @@ class CaptchaConfig extends jData
       'security.loadingAnimationDelay',
       'security.invalidateTime',
       // -- booleans
-      // 'debug',
       'token',
       'security.hoverDetection',
       'security.enableInitialMessage',
