@@ -109,7 +109,7 @@ class CaptchaTest extends TestCase
 
     $sessionData = $session->get('jdzcaptcha.42');
     $this->assertIsArray($sessionData);
-    $this->assertEquals('light', $sessionData['mode']);
+    $this->assertEquals('lc/light', $sessionData['mode']);
     $this->assertNotEmpty($sessionData['icons']);
     $this->assertNotEmpty($sessionData['iconIds']);
     $this->assertGreaterThan(0, $sessionData['correctId']);

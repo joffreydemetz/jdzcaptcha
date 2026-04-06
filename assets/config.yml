@@ -4,8 +4,8 @@ token: true
 nameSpace: jdzcaptcha
 iconPath: ""
 placeholder: ""
-theme: streamline
-variant: light
+series: lc
+theme: light
 nbIcons: 0
 path: /captcha/request/
 loaderPath: /captcha/load/
@@ -64,14 +64,14 @@ fields:
 
 sizes:
   5:
-    size: 30
-    correctMax: 1
+    size: 50
+    correctMax: 2
   6:
-    size: 30
+    size: 40
     correctMax: 2
   7:
     size: 30
-    correctMax: 2
+    correctMax: 3
   8:
-    size: 30
-    correctMax: 2
+    size: 20
+    correctMax: 3

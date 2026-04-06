@@ -42,8 +42,8 @@ class CaptchaConfig extends jData
   public function getIconSetPath(bool $resolve = true): string
   {
     $path = $this->get('iconPath')
-      . '/' . $this->get('theme')
-      . '/' . $this->get('variant');
+      . '/' . $this->get('series')
+      . '/' . $this->get('theme');
 
     return $resolve ? (realpath($path) ?: '') : $path;
   }
@@ -66,8 +66,8 @@ class CaptchaConfig extends jData
     $jsConfigVars = [
       'path',
       'fontFamily',
+      'series',
       'theme',
-      'variant',
       'credits',
       'fields.selection',
       'fields.id',

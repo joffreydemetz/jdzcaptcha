@@ -140,6 +140,10 @@ $token = $captcha->getToken()->make();
 composer test
 ```
 
+## Acknowledgements
+
+This project was initially inspired by [IconCaptcha v3.1.1](https://github.com/fabianwennink/IconCaptcha-PHP).
+
 ## License
 
 Proprietary - Copyright (c) 2018-present Joffrey Demetz. See [LICENSE](LICENSE) for details.

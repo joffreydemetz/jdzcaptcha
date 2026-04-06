@@ -122,7 +122,7 @@ class Captcha
     $this->data->clear();
 
     $this->data->sets([
-      'mode' => $theme,
+      'mode' => $this->config->get('series') . '/' . $theme,
       'icons' => $iconPositions,
       'iconIds' => $iconIds,
       'correctId' => $correctIconId,
@@ -244,6 +244,14 @@ class Captcha
     $this->data->set('requested', true);
     $this->session->set($this->nS . '.' . $this->data->id, $this->data->all());
 
+    // Restore series/theme from session data for icon path resolution
+    $mode = $this->data->get('mode');
+    if ($mode && str_contains($mode, '/')) {
+      $parts = explode('/', $mode);
+      $this->config->set('series', $parts[0]);
+      $this->config->set('theme', $parts[1]);
+    }
+
     return $this->generateImage();
   }
 
@@ -304,14 +312,17 @@ class Captcha
     $borderEnabled = $this->config->getBool('image.border');
 
     if ($borderEnabled) {
-      try {
-        $color = $this->config->getArray('variants.' . $this->data->get('mode'))['border'];
-      } catch (\Exception $e) {
-        $color = $this->config->getArray('container.border');
-      }
+      $color = [240, 240, 240];
 
-      if (count($color) <> 3) {
-        $color = [240, 240, 240];
+      $themeName = $this->config->get('theme');
+      $themes = $this->config->getArray('themes.' . $themeName);
+      if (is_array($themes) && isset($themes['border']) && is_array($themes['border']) && count($themes['border']) === 3) {
+        $color = $themes['border'];
+      } else {
+        $containerBorder = $this->config->getArray('container.border');
+        if (is_array($containerBorder) && count($containerBorder) === 3) {
+          $color = $containerBorder;
+        }
       }
 
       $borderColor = imagecolorallocate($placeholder, $color[0], $color[1], $color[2]);
