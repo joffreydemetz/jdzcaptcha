@@ -1,0 +1,77 @@
+debug: false
+lang: en
+token: true
+nameSpace: jdzcaptcha
+iconPath: ""
+placeholder: ""
+theme: streamline
+variant: light
+nbIcons: 0
+path: /captcha/request/
+loaderPath: /captcha/load/
+fontFamily: ""
+credits: show
+
+messages:
+  wrong_icon: "You've selected the wrong image."
+  no_selection: "No image was selected !"
+  empty_form: Form is empty
+  invalid_id: Invalid Captcha ID
+  form_token: Invalid Captcha Token
+  initialization:
+    verify: Verify that you are human.
+    loading: Loading challenge...
+  header: "Select the image displayed the <u>least</u> amount of times"
+  correct: Verification complete.
+  incorrect:
+    title: Uh oh.
+    subtitle: "You've selected the wrong image."
+  timeout:
+    title: Please wait 60 sec.
+    subtitle: You made too many incorrect selections.
+
+container:
+  width: 320
+
+image:
+  rotate: true
+  border: true
+  amount:
+    min: 5
+    max: 8
+  flip:
+    horizontally: true
+    vertically: true
+
+attempts:
+  amount: 3
+  timeout: 60
+
+security:
+  clickDelay: 500
+  hoverDetection: true
+  enableInitialMessage: true
+  initializeDelay: 500
+  selectionResetDelay: 3000
+  loadingAnimationDelay: 1000
+  invalidateTime: 12000
+
+fields:
+  selection: _jdzc-hf-se
+  id: _jdzc-hf-id
+  honeypot: _jdzc-hf-hp
+  token: _jdzc-token
+
+sizes:
+  5:
+    size: 30
+    correctMax: 1
+  6:
+    size: 30
+    correctMax: 2
+  7:
+    size: 30
+    correctMax: 2
+  8:
+    size: 30
+    correctMax: 2

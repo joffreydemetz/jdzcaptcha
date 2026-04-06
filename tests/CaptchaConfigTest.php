@@ -15,7 +15,7 @@ class CaptchaConfigTest extends TestCase
     $this->assertEquals('en', $config->get('lang'));
     $this->assertTrue($config->getBool('token'));
     $this->assertEquals('jdzcaptcha', $config->get('nameSpace'));
-    $this->assertEquals('lc', $config->get('theme'));
+    $this->assertEquals('streamline', $config->get('theme'));
     $this->assertEquals('light', $config->get('variant'));
     $this->assertEquals(5, $config->getInt('image.amount.min'));
     $this->assertEquals(8, $config->getInt('image.amount.max'));
@@ -54,9 +54,9 @@ class CaptchaConfigTest extends TestCase
     $this->assertEmpty($jsConfig);
 
     // Change a value from default
-    $config->set('theme', 'streamline');
+    $config->set('theme', 'other');
     $jsConfig = $config->getJsConfig();
     $this->assertArrayHasKey('theme', $jsConfig);
-    $this->assertEquals('streamline', $jsConfig['theme']);
+    $this->assertEquals('other', $jsConfig['theme']);
   }
 }

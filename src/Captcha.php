@@ -244,14 +244,7 @@ class Captcha
     $this->data->set('requested', true);
     $this->session->set($this->nS . '.' . $this->data->id, $this->data->all());
 
-    $placeholder = realpath($this->config->get('placeholder'));
-    $iconPath = $this->config->get('iconPath') . '/';
-
-    if (!is_file($placeholder)) {
-      throw new CaptchaException('Placeholder image not found');
-    }
-
-    return $this->generateImage($iconPath, $placeholder);
+    return $this->generateImage();
   }
 
   /**
@@ -287,13 +280,16 @@ class Captcha
   /**
    * Returns a generated image containing the icons for the current captcha instance.
    */
-  public function generateImage(string $iconPath, string $placeholderPath): \GdImage|false
+  public function generateImage(): \GdImage|false
   {
+    $placeholderPath = realpath($this->config->get('placeholder'));
+    $iconPath = $this->config->getIconSetPath();
+
     $placeholder = imagecreatefrompng($placeholderPath);
 
     $iconImages = [];
     foreach ($this->data->get('iconIds') as $id) {
-      $iconImages[$id] = imagecreatefrompng(realpath($iconPath . 'icon-' . $id . '.png'));
+      $iconImages[$id] = imagecreatefrompng(realpath($iconPath . '/icon-' . $id . '.png'));
     }
 
     $iconCount = count($this->data->get('icons'));
@@ -386,17 +382,17 @@ class Captcha
    */
   protected function checkIconSet(): void
   {
-    $path = realpath($this->config->get('iconPath'));
+    $path = $this->config->getIconSetPath();
 
     if (!$path || !is_dir($path)) {
-      throw new CaptchaException('JdzCaptcha icon set not found in ' . $this->config->get('iconPath'));
+      throw new CaptchaException('JdzCaptcha icon set not found in ' . $this->config->getIconSetPath(false));
     }
 
     $fi = new \FilesystemIterator($path . '/', \FilesystemIterator::SKIP_DOTS);
     $count = \iterator_count($fi);
 
     if ($count < 10) {
-      throw new CaptchaException('JdzCaptcha icon set has less than 10 icons in ' . $this->config->get('iconPath'));
+      throw new CaptchaException('JdzCaptcha icon set has less than 10 icons in ' . $this->config->getIconSetPath(false));
     }
 
     $this->config->set('nbIcons', $count);

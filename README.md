@@ -100,7 +100,7 @@ $config->loadFromFile('/path/to/config.yaml');
 |--------|---------|-------------|
 | `lang` | `'en'` | Language code |
 | `token` | `true` | Enable CSRF token validation |
-| `theme` | `'lc'` | Visual theme |
+| `theme` | `'streamline'` | Icon package |
 | `variant` | `'light'` | Color variant (`light`, `dark`) |
 | `container.width` | `320` | Container width in pixels |
 | `image.amount.min` | `5` | Minimum icons in grid |
