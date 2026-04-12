@@ -15,8 +15,8 @@ class CaptchaConfig extends jData
     $configFilePath = realpath(__DIR__ . '/../assets/config.yml');
 
     $this->loadFromFile($configFilePath);
-    $this->set('iconPath', __DIR__ . '/../assets/icons');
-    $this->set('placeholder', __DIR__ . '/../assets/placeholder.png');
+    $this->set('iconPath', __DIR__ . '/../assets/jdzcaptcha');
+    $this->set('placeholder', __DIR__ . '/../assets/jdzcaptcha/placeholder.png');
 
     $this->defaults = new jData();
     $this->defaults->sets($this->all());
