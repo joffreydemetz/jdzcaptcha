@@ -148,4 +148,4 @@ This project was initially inspired by [IconCaptcha v3.1.1](https://github.com/f
 
 ## License
 
-Proprietary - Copyright (c) 2018-present Joffrey Demetz. See [LICENSE](LICENSE) for details.
+MIT - Copyright (c) 2018-present Joffrey Demetz. See [LICENSE](LICENSE) for details.
