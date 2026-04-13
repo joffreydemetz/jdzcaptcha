@@ -2,6 +2,8 @@
 
 A PHP icon-based CAPTCHA library. Instead of distorted text, users identify and select the image displayed the least number of times in a randomized grid of icons.
 
+See [jdzcaptcha.joffreydemetz.com](https://jdzcaptcha.joffreydemetz.com) for more information on the PHP/JS implementation.
+
 ## Requirements
 
 - PHP >= 8.2
