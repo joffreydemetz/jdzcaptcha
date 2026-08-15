@@ -9,7 +9,7 @@
         "services"
     ],
     "homepage": "https://jdz.joffreydemetz.com/jdzcaptcha",
-    "license": "proprietary",
+    "license": "MIT",
     "authors": [
         {
             "name": "Joffrey Demetz",
