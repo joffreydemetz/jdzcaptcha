@@ -149,6 +149,26 @@ class CaptchaHttpHandlerTest extends TestCase
     $this->assertSame(400, $handler->image($this->envelope(['i' => 1, 'tk' => 'wrong']))->status);
   }
 
+  public function testImageMapsAnUnexpectedFailureToABadRequest(): void
+  {
+    $config = new CaptchaConfig();
+    $config->set('iconPath', __DIR__ . '/fixtures/icons');
+    $config->set('placeholder', __DIR__ . '/fixtures/placeholder.png');
+    $captcha = new class($config, new ArraySession()) extends Captcha {
+      public function getImage(int $identifier): \GdImage|false
+      {
+        throw new \RuntimeException('boom');
+      }
+    };
+    $captcha->init();
+    $handler = new CaptchaHttpHandler($captcha);
+    $token = $captcha->getToken()->make();
+
+    $result = $handler->image(base64_encode((string) json_encode(['i' => 1, 'tk' => $token])));
+
+    $this->assertSame(400, $result->status);
+  }
+
   public function testImageRendersAPngForAnExistingPuzzle(): void
   {
     [$handler, $captcha] = $this->createHandler();

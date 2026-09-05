@@ -43,6 +43,17 @@ class CaptchaHttpHandler
    */
   public function image(string $rawPayload): HttpResult
   {
+    try {
+      return $this->imageResult($rawPayload);
+    } catch (CaptchaException $e) {
+      return new HttpResult(403);
+    } catch (\Throwable $e) {
+      return new HttpResult(400);
+    }
+  }
+
+  private function imageResult(string $rawPayload): HttpResult
+  {
     $payload = $this->payload($rawPayload);
 
     if (!isset($payload['i']) || !is_numeric($payload['i'])) {
@@ -53,11 +64,7 @@ class CaptchaHttpHandler
       return new HttpResult(400);
     }
 
-    try {
-      $image = $this->captcha->getImage((int) $payload['i']);
-    } catch (CaptchaException $e) {
-      return new HttpResult(403);
-    }
+    $image = $this->captcha->getImage((int) $payload['i']);
 
     if (false === $image) {
       return new HttpResult(400);
