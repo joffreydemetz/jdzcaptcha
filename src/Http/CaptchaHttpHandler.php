@@ -15,7 +15,7 @@ use JDZ\Captcha\Exception\CaptchaException;
  *   GET  /captcha/request  -> image($queryParams['payload'])
  *   POST /captcha/request  -> action((string) $request->getBody(), $headerToken)
  *
- * Ported from the kdcoaching CaptchaController (itself a port of the legacy
+ * Ported from a site CaptchaController (itself a port of the legacy
  * Callisto\Model\JdzCaptchaFrontModelTrait). Error mapping: an invalid or
  * replayed image request throws CaptchaException -> 403; every other bad
  * input -> 400. Success bodies carry their content-type in headers; the
