@@ -8,6 +8,9 @@ See [jdzcaptcha.joffreydemetz.com](https://jdzcaptcha.joffreydemetz.com) for mor
 
 - PHP >= 8.2
 - GD extension (`ext-gd`)
+- [`jdz/data`](https://jdz.joffreydemetz.com/data) ^2.0
+- `symfony/yaml` ^7.4
+- Optional: `symfony/http-foundation` for the `SymfonySession` adapter
 
 ## Installation
 
@@ -24,15 +27,56 @@ use JDZ\Captcha\CaptchaConfig;
 $config = new CaptchaConfig();
 $captcha = new Captcha($config);
 $captcha->init();
+```
 
-// Generate captcha data (returns base64-encoded JSON)
+### HTTP Endpoints
+
+The widget talks to three endpoints. `JDZ\Captcha\Http\CaptchaHttpHandler`
+implements them framework-free; each method returns a `JDZ\Captcha\Http\HttpResult`
+(`status`, `body`, lowercase `headers`) that your controller maps onto its own
+response type (PSR-7, Symfony, or plain `header()` / `echo`):
+
+| Route | Handler call |
+|-------|--------------|
+| `POST /captcha/load` | `load()` — the widget configuration (JSON) |
+| `GET /captcha/request?payload=…` | `image($payload)` — the single-use challenge image (PNG) |
+| `POST /captcha/request` | `action($rawBody, $headerToken)` — image hashes, answer selection, interaction timeout |
+
+```php
+use JDZ\Captcha\Http\CaptchaHttpHandler;
+
+$handler = new CaptchaHttpHandler($captcha);
+$path = rtrim((string) parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+
+$result = match (true) {
+    '/captcha/load' === $path => $handler->load(),
+    'GET' === $_SERVER['REQUEST_METHOD'] => $handler->image($_GET['payload'] ?? ''),
+    default => $handler->action((string) file_get_contents('php://input'), $_SERVER['HTTP_X_JDZCAPTCHA_TOKEN'] ?? ''),
+};
+
+http_response_code($result->status);
+foreach ($result->headers as $name => $value) {
+    header($name . ': ' . $value);
+}
+echo $result->body;
+```
+
+An invalid or replayed image request answers 403; any other bad input (or an
+unexpected failure) answers 400. Transport concerns stay with you: no-cache
+headers on the image, CORS, and so on. The paths are configurable (`path`,
+`loaderPath`).
+
+### Lower-level API
+
+The handler is built on these `Captcha` methods, which you can also call
+directly:
+
+```php
+// Generate captcha data for a theme (returns base64-encoded JSON)
 $data = $captcha->getCaptchaData('light', 1);
 
-// Generate the image
+// Generate the image (\GdImage, or false)
 $image = $captcha->getImage(1);
-header('Content-Type: image/png');
-imagepng($image);
-imagedestroy($image);
 ```
 
 ### Handling User Selection (AJAX)
@@ -102,8 +146,10 @@ $config->loadFromFile('/path/to/config.yaml');
 |--------|---------|-------------|
 | `lang` | `'en'` | Language code |
 | `token` | `true` | Enable CSRF token validation |
-| `theme` | `'streamline'` | Icon package |
-| `variant` | `'light'` | Color variant (`light`, `dark`) |
+| `series` | `'streamline'` | Icon package |
+| `theme` | `'light'` | Color variant (`light`, `dark`) |
+| `path` | `'/captcha/request/'` | Endpoint for the image and the ajax actions |
+| `loaderPath` | `'/captcha/load/'` | Endpoint for the widget configuration |
 | `container.width` | `320` | Container width in pixels |
 | `image.amount.min` | `5` | Minimum icons in grid |
 | `image.amount.max` | `8` | Maximum icons in grid |
@@ -141,6 +187,12 @@ $token = $captcha->getToken()->make();
 ```bash
 composer test
 ```
+
+## Changelog
+
+- **2.2.0** - `CaptchaHttpHandler::image()` maps unexpected failures to 400.
+- **2.1.0** - HTTP layer: `Http\CaptchaHttpHandler` + `Http\HttpResult`.
+- **2.0.4 / 2.0.5** - MIT license.
 
 ## Acknowledgements
 
