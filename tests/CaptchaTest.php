@@ -772,4 +772,29 @@ class CaptchaTest extends TestCase
     $this->assertFalse($captcha->setSelectedAnswer(['i' => 77, 'x' => 10, 'y' => 25, 'w' => 320]));
     $this->assertFalse($session->has('jdzcaptcha.77'));
   }
+
+  public static function nameSpaceProvider(): array
+  {
+    return [
+      'a slash' => ['app/captcha', 'app/captchaX9'],
+      'a dot' => ['my.captcha', 'myXcaptcha.9'],
+    ];
+  }
+
+  /**
+   * The namespace used to go into the cleaning regex unquoted: a slash broke the
+   * pattern (warning, nothing cleaned), a dot matched the app's own keys.
+   */
+  #[DataProvider('nameSpaceProvider')]
+  public function testInitCleansOnlyItsOwnNamespace(string $nameSpace, string $appKey): void
+  {
+    [$captcha, $session] = $this->createCaptcha(['nameSpace' => $nameSpace]);
+    $session->set($nameSpace . '.7', ['correctId' => 3]);
+    $session->set($appKey, ['id' => 12]);
+
+    $captcha->init();
+
+    $this->assertFalse($session->has($nameSpace . '.7'));
+    $this->assertTrue($session->has($appKey));
+  }
 }

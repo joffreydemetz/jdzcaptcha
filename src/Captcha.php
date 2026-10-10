@@ -382,7 +382,7 @@ class Captcha
     $sessionData = $this->session->all();
 
     foreach ($sessionData as $key => $value) {
-      if (!preg_match("/^" . $this->nS . "\.(.+)$/", $key, $m)) {
+      if (!preg_match("/^" . preg_quote($this->nS, "/") . "\.(.+)$/", $key, $m)) {
         continue;
       }
 
