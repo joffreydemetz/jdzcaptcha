@@ -196,6 +196,11 @@ class Captcha
 
     $this->createCaptchaData($payload['i']);
 
+    // no answer is taken while the attempts limit holds the captcha locked
+    if (($tOut = $this->data->get('attemptsTimeout')) && time() <= $tOut) {
+      return false;
+    }
+
     $icons = $this->data->get('icons');
     $clickedPosition = $this->determineClickedIcon($payload['x'], $payload['y'], $payload['w'], count($icons));
 
@@ -215,7 +220,8 @@ class Captcha
     $attempts = $this->data->get('attempts') + 1;
     $this->data->set('attempts', $attempts);
 
-    if ($attempts === $this->config->getInt('attempts.amount') && $this->config->getInt('attempts.timeout') > 0) {
+    // past the limit, every wrong answer locks again
+    if ($attempts >= $this->config->getInt('attempts.amount') && $this->config->getInt('attempts.timeout') > 0) {
       $this->data->set('attemptsTimeout', time() + $this->config->getInt('attempts.timeout'));
     }
 

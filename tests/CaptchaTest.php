@@ -679,4 +679,45 @@ class CaptchaTest extends TestCase
 
     $this->assertThrows(fn() => $captcha->validate($post), CaptchaValidationException::class, 6, 'Invalid Captcha Token');
   }
+
+  /**
+   * The lock used to be checked only when a new puzzle was asked for: a bot that
+   * kept answering the same puzzle could click every slot, and its correct answer
+   * lifted the lock.
+   */
+  public function testAnswersAreRefusedWhileLockedOut(): void
+  {
+    [$captcha, $session] = $this->createInitializedCaptcha(['attempts.amount' => 2, 'attempts.timeout' => 60]);
+    $captcha->getCaptchaData('light', 1);
+    $this->assertFalse($captcha->setSelectedAnswer($this->answer($session, 1, false)));
+    $this->assertFalse($captcha->setSelectedAnswer($this->answer($session, 1, false)));
+    $locked = $session->get('jdzcaptcha.1');
+
+    $this->assertFalse($captcha->setSelectedAnswer($this->answer($session, 1, true)));
+    $this->assertSame($locked, $session->get('jdzcaptcha.1'), 'a refused answer changes nothing');
+  }
+
+  /**
+   * Past the limit every wrong answer locks again: the lock used to be set only
+   * when the count hit the limit exactly, so once it ran out the same puzzle could
+   * be answered without limit.
+   */
+  public function testAWrongAnswerAfterTheLockRanOutLocksAgain(): void
+  {
+    [$captcha, $session] = $this->createInitializedCaptcha(['attempts.amount' => 2, 'attempts.timeout' => 60]);
+    $captcha->getCaptchaData('light', 1);
+    $captcha->setSelectedAnswer($this->answer($session, 1, false));
+    $captcha->setSelectedAnswer($this->answer($session, 1, false));
+
+    $expired = $session->get('jdzcaptcha.1');
+    $expired['attemptsTimeout'] = time() - 1;
+    $session->set('jdzcaptcha.1', $expired);
+
+    $before = time();
+    $this->assertFalse($captcha->setSelectedAnswer($this->answer($session, 1, false)));
+
+    $relocked = $session->get('jdzcaptcha.1');
+    $this->assertSame(3, $relocked['attempts']);
+    $this->assertGreaterThanOrEqual($before + 60, $relocked['attemptsTimeout']);
+  }
 }
