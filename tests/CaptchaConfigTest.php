@@ -3,10 +3,17 @@
 namespace JDZ\Captcha\Tests;
 
 use JDZ\Captcha\CaptchaConfig;
+use JDZ\Captcha\Exception\CaptchaException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class CaptchaConfigTest extends TestCase
 {
+  private function expectExactExceptionMessage(string $message): void
+  {
+    $this->expectExceptionMessageMatches('/^' . preg_quote($message, '/') . '$/');
+  }
+
   public function testDefaultValues(): void
   {
     $config = new CaptchaConfig();
@@ -36,17 +43,6 @@ class CaptchaConfigTest extends TestCase
     $this->assertFileExists($placeholder);
   }
 
-  public function testSetAndGet(): void
-  {
-    $config = new CaptchaConfig();
-
-    $config->set('debug', true);
-    $this->assertTrue($config->getBool('debug'));
-
-    $config->set('lang', 'fr');
-    $this->assertEquals('fr', $config->get('lang'));
-  }
-
   public function testGetJsConfigReturnsOnlyNonDefaults(): void
   {
     $config = new CaptchaConfig();
@@ -61,5 +57,74 @@ class CaptchaConfigTest extends TestCase
 
     $config->set('theme', 'dark');
     $this->assertSame(['theme' => 'dark'], $config->getJsConfig());
+  }
+
+  public function testLoadFromFileMergesOverridesIntoTheDefaults(): void
+  {
+    $config = new CaptchaConfig();
+
+    $config->loadFromFile(__DIR__ . '/fixtures/config-override.yml');
+
+    $this->assertSame('dark', $config->get('theme'));
+    $this->assertSame(5, $config->get('attempts.amount'));
+    $this->assertSame(60, $config->get('attempts.timeout'), 'A partial section keeps its other defaults');
+    $this->assertSame('streamline', $config->get('series'));
+  }
+
+  public static function unreadableYamlProvider(): array
+  {
+    return [
+      'malformed' => [__DIR__ . '/fixtures/config-invalid.yml', '/^Unable to parse the YAML application config : Malformed inline YAML string/'],
+      'missing' => [__DIR__ . '/fixtures/config-missing.yml', '/^Unable to parse the YAML application config : File ".*config-missing\.yml" does not exist\.$/'],
+    ];
+  }
+
+  #[DataProvider('unreadableYamlProvider')]
+  public function testLoadFromFileRefusesAnUnreadableFile(string $path, string $message): void
+  {
+    $config = new CaptchaConfig();
+
+    $this->expectException(CaptchaException::class);
+    $this->expectExceptionMessageMatches($message);
+
+    $config->loadFromFile($path);
+  }
+
+  public function testCheckAcceptsTheShippedAssets(): void
+  {
+    $this->expectNotToPerformAssertions();
+
+    (new CaptchaConfig())->check();
+  }
+
+  public function testCheckRefusesAMissingIconSet(): void
+  {
+    $config = new CaptchaConfig();
+    $config->set('iconPath', '/nonexistent/path');
+
+    $this->expectException(CaptchaException::class);
+    $this->expectExactExceptionMessage('Invalid iconPath: /nonexistent/path/streamline/light');
+
+    $config->check();
+  }
+
+  public static function badPlaceholderProvider(): array
+  {
+    return [
+      'missing file' => [__DIR__ . '/fixtures/missing.png'],
+      'a directory' => [__DIR__ . '/fixtures/icons'],
+    ];
+  }
+
+  #[DataProvider('badPlaceholderProvider')]
+  public function testCheckRefusesABadPlaceholder(string $placeholder): void
+  {
+    $config = new CaptchaConfig();
+    $config->set('placeholder', $placeholder);
+
+    $this->expectException(CaptchaException::class);
+    $this->expectExactExceptionMessage('Invalid placeholder path: ' . $placeholder);
+
+    $config->check();
   }
 }

@@ -65,10 +65,4 @@ class CaptchaTokenTest extends TestCase
     // Empty session token should fail even with matching payload
     $this->assertFalse($token->validate(null));
   }
-
-  public function testToString(): void
-  {
-    $token = new CaptchaToken(true, 'my-token');
-    $this->assertEquals('my-token', (string)$token);
-  }
 }

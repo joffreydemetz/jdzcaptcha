@@ -4,6 +4,7 @@ namespace JDZ\Captcha\Tests;
 
 use JDZ\Captcha\Captcha;
 use JDZ\Captcha\CaptchaConfig;
+use JDZ\Captcha\Exception\CaptchaException;
 use JDZ\Captcha\Http\CaptchaHttpHandler;
 use PHPUnit\Framework\TestCase;
 
@@ -34,6 +35,17 @@ class CaptchaHttpHandlerTest extends TestCase
   private function body(array $payload): string
   {
     return (string) json_encode(['payload' => $this->envelope($payload)]);
+  }
+
+  /**
+   * The centre of the first slot showing the correct icon, as the widget reports a click.
+   */
+  private function correctClick(ArraySession $session, int $id): array
+  {
+    $puzzle = $session->get('jdzcaptcha.' . $id);
+    $position = array_search($puzzle['correctId'], $puzzle['icons'], true);
+
+    return ['x' => (int)(($position - 0.5) * 320 / count($puzzle['icons'])), 'y' => 25, 'w' => 320];
   }
 
   public function testLoadReturnsTheJsConfigAsJson(): void
@@ -101,8 +113,43 @@ class CaptchaHttpHandlerTest extends TestCase
 
     $this->assertSame(200, $result->status);
     $this->assertSame('text/plain', $result->headers['content-type']);
-    $decoded = json_decode((string) base64_decode($result->body, true), true);
-    $this->assertIsArray($decoded);
+    $this->assertSame(['id' => 1], json_decode((string) base64_decode($result->body, true), true));
+  }
+
+  public function testActionMapsAnyCaptchaFailureToABadRequest(): void
+  {
+    $config = new CaptchaConfig();
+    $config->set('iconPath', __DIR__ . '/fixtures/icons');
+    $config->set('placeholder', __DIR__ . '/fixtures/placeholder.png');
+    $captcha = new class($config, new ArraySession()) extends Captcha {
+      public function getCaptchaData(string $theme, int $identifier): string
+      {
+        throw new CaptchaException('Image already requested', 403);
+      }
+    };
+    $captcha->init();
+    $handler = new CaptchaHttpHandler($captcha);
+    $token = $captcha->getToken()->make();
+
+    $result = $handler->action($this->body(['a' => 1, 'i' => 1, 'tk' => $token]), $token);
+
+    // Unlike image(), action() has no 403: a CaptchaException is a bad request like any other failure.
+    $this->assertSame(400, $result->status);
+    $this->assertSame('', $result->body);
+  }
+
+  public function testActionTwoAcceptsTheCorrectIcon(): void
+  {
+    [$handler, $captcha, $session] = $this->createHandler();
+    $token = $captcha->getToken()->make();
+    $handler->action($this->body(['a' => 1, 'i' => 1, 'tk' => $token]), $token);
+
+    $result = $handler->action($this->body(['a' => 2, 'i' => 1, 'tk' => $token] + $this->correctClick($session, 1)), $token);
+
+    $this->assertSame(200, $result->status);
+    $this->assertSame('application/json', $result->headers['content-type']);
+    $this->assertSame('{"success":true,"errorCode":0,"errorMessage":""}', $result->body);
+    $this->assertTrue($session->get('jdzcaptcha.1')['completed']);
   }
 
   public function testActionTwoReportsABadChoice(): void
@@ -116,9 +163,7 @@ class CaptchaHttpHandlerTest extends TestCase
 
     $this->assertSame(200, $result->status);
     $this->assertSame('application/json', $result->headers['content-type']);
-    $json = json_decode($result->body, true);
-    $this->assertFalse($json['success']);
-    $this->assertSame(100, $json['errorCode']);
+    $this->assertSame('{"success":false,"errorCode":100,"errorMessage":"Bad user choice"}', $result->body);
   }
 
   public function testActionThreeInvalidatesAndReturnsAnEmptyBody(): void
@@ -131,6 +176,7 @@ class CaptchaHttpHandlerTest extends TestCase
 
     $this->assertSame(200, $result->status);
     $this->assertSame('', $result->body);
+    $this->assertFalse($session->has('jdzcaptcha.1'));
   }
 
   public function testImageRejectsAMalformedPayload(): void
@@ -180,5 +226,50 @@ class CaptchaHttpHandlerTest extends TestCase
     $this->assertSame(200, $result->status);
     $this->assertSame('image/png', $result->headers['content-type']);
     $this->assertStringStartsWith("\x89PNG", $result->body);
+  }
+
+  public function testImageIsForbiddenOnceServed(): void
+  {
+    [$handler, $captcha] = $this->createHandler();
+    $token = $captcha->getToken()->make();
+    $handler->action($this->body(['a' => 1, 'i' => 1, 'tk' => $token]), $token);
+    $handler->image($this->envelope(['i' => 1, 'tk' => $token]));
+
+    $result = $handler->image($this->envelope(['i' => 1, 'tk' => $token]));
+
+    $this->assertSame(403, $result->status);
+    $this->assertSame('', $result->body);
+  }
+
+  public function testImageIsForbiddenForAPuzzleNeverRequested(): void
+  {
+    [$handler, $captcha] = $this->createHandler();
+    $token = $captcha->getToken()->make();
+
+    $result = $handler->image($this->envelope(['i' => 7, 'tk' => $token]));
+
+    $this->assertSame(403, $result->status);
+    $this->assertSame('', $result->body);
+  }
+
+  public function testImageMapsAMissingImageToABadRequest(): void
+  {
+    $config = new CaptchaConfig();
+    $config->set('iconPath', __DIR__ . '/fixtures/icons');
+    $config->set('placeholder', __DIR__ . '/fixtures/placeholder.png');
+    $captcha = new class($config, new ArraySession()) extends Captcha {
+      public function getImage(int $identifier): \GdImage|false
+      {
+        return false;
+      }
+    };
+    $captcha->init();
+    $handler = new CaptchaHttpHandler($captcha);
+    $token = $captcha->getToken()->make();
+
+    $result = $handler->image($this->envelope(['i' => 1, 'tk' => $token]));
+
+    $this->assertSame(400, $result->status);
+    $this->assertSame('', $result->body);
   }
 }

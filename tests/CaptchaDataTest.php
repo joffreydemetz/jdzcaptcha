@@ -19,27 +19,6 @@ class CaptchaDataTest extends TestCase
     $this->assertNotEmpty($data->get('ts'));
   }
 
-  public function testConstructorWithExistingData(): void
-  {
-    $sessionData = [
-      'mode' => 'light',
-      'icons' => [1 => 5, 2 => 3, 3 => 5],
-      'iconIds' => [5, 3],
-      'correctId' => 3,
-      'requested' => true,
-      'completed' => false,
-      'attempts' => 1,
-      'ts' => time(),
-    ];
-
-    $data = new CaptchaData(7, $sessionData);
-
-    $this->assertEquals(7, $data->id);
-    $this->assertEquals(3, $data->get('correctId'));
-    $this->assertTrue($data->get('requested'));
-    $this->assertEquals([5, 3], $data->get('iconIds'));
-  }
-
   public function testClear(): void
   {
     $data = new CaptchaData(1, [

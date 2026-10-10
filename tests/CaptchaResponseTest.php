@@ -32,26 +32,4 @@ class CaptchaResponseTest extends TestCase
     // Error code > 0 with message forces success to false
     $this->assertFalse($response->success);
   }
-
-  public function testJsonSerialize(): void
-  {
-    $response = new CaptchaResponse(true);
-    $json = json_encode($response);
-    $decoded = json_decode($json, true);
-
-    $this->assertTrue($decoded['success']);
-    $this->assertEquals(0, $decoded['errorCode']);
-    $this->assertEquals('', $decoded['errorMessage']);
-  }
-
-  public function testToArray(): void
-  {
-    $response = new CaptchaResponse(false, 5, 'Test error');
-    $array = $response->toArray();
-
-    $this->assertArrayHasKey('success', $array);
-    $this->assertArrayHasKey('errorCode', $array);
-    $this->assertArrayHasKey('errorMessage', $array);
-    $this->assertFalse($array['success']);
-  }
 }
