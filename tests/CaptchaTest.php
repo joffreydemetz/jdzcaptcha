@@ -622,6 +622,9 @@ class CaptchaTest extends TestCase
       'selection missing' => [['_jdzc-hf-se' => null], 2, 'No image was selected !'],
       'selection not a string' => [['_jdzc-hf-se' => ['160', '25', '320']], 2, 'No image was selected !'],
       'selection not x,y,width' => [['_jdzc-hf-se' => '160,25'], 1, "You've selected the wrong image."],
+      'selection not numeric' => [['_jdzc-hf-se' => 'a,b,c'], 1, "You've selected the wrong image."],
+      'selection with no width' => [['_jdzc-hf-se' => '0,0,0'], 1, "You've selected the wrong image."],
+      'selection outside the image' => [['_jdzc-hf-se' => '500,25,320'], 1, "You've selected the wrong image."],
     ];
   }
 
@@ -719,5 +722,54 @@ class CaptchaTest extends TestCase
     $relocked = $session->get('jdzcaptcha.1');
     $this->assertSame(3, $relocked['attempts']);
     $this->assertGreaterThanOrEqual($before + 60, $relocked['attemptsTimeout']);
+  }
+
+  /**
+   * x = 0 is the left edge of the first icon: it used to resolve to slot 0, which
+   * does not exist.
+   */
+  public function testTheLeftEdgeOfTheImageIsTheFirstIcon(): void
+  {
+    [$captcha, $session, $post] = $this->solvedCaptcha();
+    $puzzle = $session->get('jdzcaptcha.1');
+    $puzzle['icons'][1] = $puzzle['correctId'];
+    $session->set('jdzcaptcha.1', $puzzle);
+    $post['_jdzc-hf-se'] = '0,25,320';
+
+    $this->assertTrue($captcha->validate($post));
+  }
+
+  public static function malformedClickProvider(): array
+  {
+    return [
+      'x not numeric: refused, not counted' => [['x' => 'a'], 0],
+      'width not numeric: refused, not counted' => [['w' => 'wide'], 0],
+      'id not numeric: refused, not counted' => [['i' => 'one'], 0],
+      'no width: a wrong answer' => [['w' => 0], 1],
+      'right of the image: a wrong answer' => [['x' => 500], 1],
+      'below the image: a wrong answer' => [['y' => 80], 1],
+    ];
+  }
+
+  /**
+   * A click the widget cannot produce used to end in a TypeError, a division by
+   * zero or an undefined array key.
+   */
+  #[DataProvider('malformedClickProvider')]
+  public function testAMalformedClickIsRefusedWithoutAnError(array $changes, int $attempts): void
+  {
+    [$captcha, $session] = $this->createInitializedCaptcha();
+    $captcha->getCaptchaData('light', 1);
+
+    $this->assertFalse($captcha->setSelectedAnswer(array_merge($this->answer($session, 1, true), $changes)));
+    $this->assertSame($attempts, $session->get('jdzcaptcha.1')['attempts'] ?? 0);
+  }
+
+  public function testAnAnswerForAPuzzleThatDoesNotExistIsRefused(): void
+  {
+    [$captcha, $session] = $this->createInitializedCaptcha();
+
+    $this->assertFalse($captcha->setSelectedAnswer(['i' => 77, 'x' => 10, 'y' => 25, 'w' => 320]));
+    $this->assertFalse($session->has('jdzcaptcha.77'));
   }
 }

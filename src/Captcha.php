@@ -168,14 +168,14 @@ class Captcha
       throw new CaptchaValidationException($this->config->get('messages.no_selection'), 2);
     }
 
-    $icons = $this->data->get('icons');
+    $icons = (array) $this->data->get('icons');
 
     $selection = explode(',', $post[$fields['selection']]);
-    if (count($selection) === 3) {
-      $clickedPosition = $this->determineClickedIcon($selection[0], $selection[1], $selection[2], count($icons));
+    if (count($selection) === 3 && array_filter($selection, 'is_numeric') === $selection) {
+      $clickedPosition = $this->determineClickedIcon((int) $selection[0], (int) $selection[1], (int) $selection[2], count($icons));
     }
 
-    if (false === $this->data->get('completed') || !isset($clickedPosition) || $icons[$clickedPosition] !== $this->data->get('correctId')) {
+    if (false === $this->data->get('completed') || !isset($clickedPosition, $icons[$clickedPosition]) || $icons[$clickedPosition] !== $this->data->get('correctId')) {
       throw new CaptchaValidationException($this->config->get('messages.wrong_icon'), 1);
     }
 
@@ -194,7 +194,11 @@ class Captcha
       return false;
     }
 
-    $this->createCaptchaData($payload['i']);
+    if (!is_numeric($payload['i']) || !is_numeric($payload['x']) || !is_numeric($payload['y']) || !is_numeric($payload['w'])) {
+      return false;
+    }
+
+    $this->createCaptchaData((int) $payload['i']);
 
     // no answer is taken while the attempts limit holds the captcha locked
     if (($tOut = $this->data->get('attemptsTimeout')) && time() <= $tOut) {
@@ -202,9 +206,15 @@ class Captcha
     }
 
     $icons = $this->data->get('icons');
-    $clickedPosition = $this->determineClickedIcon($payload['x'], $payload['y'], $payload['w'], count($icons));
 
-    if ($icons[$clickedPosition] === $this->data->get('correctId')) {
+    // no puzzle under that id
+    if (!$icons) {
+      return false;
+    }
+
+    $clickedPosition = $this->determineClickedIcon((int) $payload['x'], (int) $payload['y'], (int) $payload['w'], count($icons));
+
+    if (isset($icons[$clickedPosition]) && $icons[$clickedPosition] === $this->data->get('correctId')) {
       $this->data->sets([
         'attempts' => 0,
         'attemptsTimeout' => 0,
@@ -422,10 +432,12 @@ class Captcha
 
   protected function determineClickedIcon(int $clickedXPos, int $clickedYPos, int $captchaWidth, int $iconAmount): int
   {
-    if ($clickedXPos < 0 || $clickedXPos > $captchaWidth || $clickedYPos < 0 || $clickedYPos > 50) {
+    if ($captchaWidth <= 0 || $iconAmount <= 0 || $clickedXPos < 0 || $clickedXPos > $captchaWidth || $clickedYPos < 0 || $clickedYPos > 50) {
       return -1;
     }
-    return (int)ceil($clickedXPos / ($captchaWidth / $iconAmount));
+
+    // slots start at 1: the left edge (x = 0) belongs to the first icon
+    return max(1, (int)ceil($clickedXPos / ($captchaWidth / $iconAmount)));
   }
 
   protected function calculateIconAmounts(int $iconCount, int $smallestIconCount = 1): array
