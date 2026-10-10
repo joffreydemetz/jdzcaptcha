@@ -190,6 +190,7 @@ composer test
 
 ## Changelog
 
+- **2.2.1** - Answers are refused while the captcha is locked out, and every wrong answer past the limit locks again; a malformed or out-of-range click is a wrong answer instead of a PHP error; session cleaning quotes the namespace.
 - **2.2.0** - `CaptchaHttpHandler::image()` maps unexpected failures to 400.
 - **2.1.0** - HTTP layer: `Http\CaptchaHttpHandler` + `Http\HttpResult`.
 - **2.0.4 / 2.0.5** - MIT license.
