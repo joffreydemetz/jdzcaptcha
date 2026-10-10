@@ -30,8 +30,10 @@ class CaptchaConfigTest extends TestCase
     $iconPath = $config->get('iconPath');
     $placeholder = $config->get('placeholder');
 
-    $this->assertStringEndsWith('assets/icons', $iconPath);
-    $this->assertStringEndsWith('assets/placeholder.png', $placeholder);
+    $this->assertStringEndsWith('assets/jdzcaptcha', $iconPath);
+    $this->assertStringEndsWith('assets/jdzcaptcha/placeholder.png', $placeholder);
+    $this->assertDirectoryExists($iconPath . '/streamline/light', 'The default series/theme ships with the package');
+    $this->assertFileExists($placeholder);
   }
 
   public function testSetAndGet(): void
@@ -53,10 +55,11 @@ class CaptchaConfigTest extends TestCase
     $jsConfig = $config->getJsConfig();
     $this->assertEmpty($jsConfig);
 
-    // Change a value from default
+    // Setting a default value changes nothing, a different one is exported alone
     $config->set('series', 'streamline');
-    $jsConfig = $config->getJsConfig();
-    $this->assertArrayHasKey('series', $jsConfig);
-    $this->assertEquals('streamline', $jsConfig['series']);
+    $this->assertSame([], $config->getJsConfig());
+
+    $config->set('theme', 'dark');
+    $this->assertSame(['theme' => 'dark'], $config->getJsConfig());
   }
 }
