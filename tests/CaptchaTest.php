@@ -469,6 +469,43 @@ class CaptchaTest extends TestCase
     $this->assertEquals(1, $updatedData['attempts']);
   }
 
+  /**
+   * D28 (2026-10-10): a wrong answer left the puzzle answerable, so a bot could
+   * click slot after slot of the same image until the lock. A wrong answer now
+   * spends the puzzle; the widget asks for a new one anyway (jizy-captcha
+   * reset() after the "incorrect" message).
+   */
+  public function testAWrongAnswerSpendsThePuzzle(): void
+  {
+    [$captcha, $session] = $this->createInitializedCaptcha();
+    $captcha->getCaptchaData('light', 1);
+    $right = $this->answer($session, 1, true);
+
+    $this->assertFalse($captcha->setSelectedAnswer($this->answer($session, 1, false)));
+    $this->assertFalse($captcha->setSelectedAnswer($right), 'the right answer comes too late');
+
+    $slot = $session->get('jdzcaptcha.1');
+    $this->assertArrayNotHasKey('icons', $slot);
+    $this->assertArrayNotHasKey('iconIds', $slot);
+    $this->assertSame(0, $slot['correctId']);
+    $this->assertFalse($slot['completed']);
+    $this->assertSame(1, $slot['attempts'], 'the late answer is not counted: there is nothing left to answer');
+
+    $this->assertThrows(fn() => $captcha->getImage(1), CaptchaException::class, 403, 'Invalid captcha state');
+  }
+
+  public function testTheNextPuzzleIsAnswerableAndCarriesTheCount(): void
+  {
+    [$captcha, $session] = $this->createInitializedCaptcha();
+    $captcha->getCaptchaData('light', 1);
+    $captcha->setSelectedAnswer($this->answer($session, 1, false));
+
+    $captcha->getCaptchaData('light', 1);
+
+    $this->assertSame(1, $session->get('jdzcaptcha.1')['attempts']);
+    $this->assertTrue($captcha->setSelectedAnswer($this->answer($session, 1, true)));
+  }
+
   public function testSetSelectedAnswerEmptyPayload(): void
   {
     [$captcha] = $this->createInitializedCaptcha();
@@ -652,6 +689,41 @@ class CaptchaTest extends TestCase
     $this->assertThrows(fn() => $captcha->validate($post), CaptchaValidationException::class, 1, "You've selected the wrong image.");
   }
 
+  /**
+   * D28: a form posted with the wrong icon could be posted again with the
+   * right one. The wrong post spends the puzzle and counts as an attempt.
+   */
+  public function testAWrongFormPostSpendsThePuzzleAndCounts(): void
+  {
+    [$captcha, $session, $post] = $this->solvedCaptcha();
+    $right = $post['_jdzc-hf-se'];
+    $post['_jdzc-hf-se'] = $this->selection($session, 1, false);
+
+    $this->assertThrows(fn() => $captcha->validate($post), CaptchaValidationException::class, 1, "You've selected the wrong image.");
+
+    $post['_jdzc-hf-se'] = $right;
+    $this->assertThrows(fn() => $captcha->validate($post), CaptchaValidationException::class, 4, 'Invalid Captcha ID');
+    $this->assertSame(1, $session->get('jdzcaptcha.1')['attempts']);
+  }
+
+  public function testWrongFormPostsLockLikeWrongClicks(): void
+  {
+    [$captcha, $session] = $this->createInitializedCaptcha(['attempts.amount' => 1, 'attempts.timeout' => 60]);
+    $captcha->getCaptchaData('light', 1);
+    $post = [
+      '_jdzc-hf-id' => '1',
+      '_jdzc-hf-hp' => '',
+      '_jdzc-token' => $session->get('jdzcaptcha.csrf'),
+      '_jdzc-hf-se' => $this->selection($session, 1, false),
+    ];
+
+    $before = time();
+    $this->assertThrows(fn() => $captcha->validate($post), CaptchaValidationException::class, 1, "You've selected the wrong image.");
+
+    $this->assertGreaterThanOrEqual($before + 60, $session->get('jdzcaptcha.1')['attemptsTimeout']);
+    $this->assertSame(1, json_decode(base64_decode($captcha->getCaptchaData('light', 1)), true)['error']);
+  }
+
   public function testValidateRefusesAPuzzleThatWasNeverAnswered(): void
   {
     [$captcha, $session] = $this->createInitializedCaptcha();
@@ -671,7 +743,8 @@ class CaptchaTest extends TestCase
     [$captcha, $session, $post] = $this->solvedCaptcha();
     $this->assertFalse($captcha->setSelectedAnswer($this->answer($session, 1, false)));
 
-    $this->assertThrows(fn() => $captcha->validate($post), CaptchaValidationException::class, 1, "You've selected the wrong image.");
+    // the wrong click spent the puzzle (D28): its id is no longer one
+    $this->assertThrows(fn() => $captcha->validate($post), CaptchaValidationException::class, 4, 'Invalid Captcha ID');
   }
 
   public function testValidateRefusesWhenTheSessionHasNoToken(): void
@@ -692,9 +765,13 @@ class CaptchaTest extends TestCase
   {
     [$captcha, $session] = $this->createInitializedCaptcha(['attempts.amount' => 2, 'attempts.timeout' => 60]);
     $captcha->getCaptchaData('light', 1);
-    $this->assertFalse($captcha->setSelectedAnswer($this->answer($session, 1, false)));
-    $this->assertFalse($captcha->setSelectedAnswer($this->answer($session, 1, false)));
+
+    // a live puzzle under a lock (a wrong answer now spends the puzzle, so the
+    // state is seeded: the lock must hold on its own)
     $locked = $session->get('jdzcaptcha.1');
+    $locked['attempts'] = 2;
+    $locked['attemptsTimeout'] = time() + 60;
+    $session->set('jdzcaptcha.1', $locked);
 
     $this->assertFalse($captcha->setSelectedAnswer($this->answer($session, 1, true)));
     $this->assertSame($locked, $session->get('jdzcaptcha.1'), 'a refused answer changes nothing');
@@ -709,10 +786,11 @@ class CaptchaTest extends TestCase
   {
     [$captcha, $session] = $this->createInitializedCaptcha(['attempts.amount' => 2, 'attempts.timeout' => 60]);
     $captcha->getCaptchaData('light', 1);
-    $captcha->setSelectedAnswer($this->answer($session, 1, false));
-    $captcha->setSelectedAnswer($this->answer($session, 1, false));
 
+    // a live puzzle past the limit whose lock ran out (seeded: a wrong answer
+    // now spends the puzzle, and getCaptchaData() resets an expired count)
     $expired = $session->get('jdzcaptcha.1');
+    $expired['attempts'] = 2;
     $expired['attemptsTimeout'] = time() - 1;
     $session->set('jdzcaptcha.1', $expired);
 

@@ -164,6 +164,11 @@ class Captcha
 
     $this->createCaptchaData($identifier);
 
+    // the slot outlives a spent puzzle (it keeps the attempt count): no icons, no puzzle
+    if (!$this->data->get('icons')) {
+      throw new CaptchaValidationException($this->config->get('messages.invalid_id'), 4);
+    }
+
     if (empty($post[$fields['selection']]) || !is_string($post[$fields['selection']])) {
       throw new CaptchaValidationException($this->config->get('messages.no_selection'), 2);
     }
@@ -176,6 +181,8 @@ class Captcha
     }
 
     if (false === $this->data->get('completed') || !isset($clickedPosition, $icons[$clickedPosition]) || $icons[$clickedPosition] !== $this->data->get('correctId')) {
+      $this->spendPuzzle();
+
       throw new CaptchaValidationException($this->config->get('messages.wrong_icon'), 1);
     }
 
@@ -225,18 +232,34 @@ class Captcha
       return true;
     }
 
-    $this->data->set('completed', false);
+    $this->spendPuzzle();
 
-    $attempts = $this->data->get('attempts') + 1;
-    $this->data->set('attempts', $attempts);
+    return false;
+  }
 
-    // past the limit, every wrong answer locks again
+  /**
+   * A wrong answer spends the puzzle: its icons and its answer are dropped, so
+   * the same id can never be answered again, and the attempt is counted (past
+   * the limit, every wrong answer locks again). The slot keeps the count and
+   * the lock: the widget's next puzzle (getCaptchaData) carries them on.
+   */
+  private function spendPuzzle(): void
+  {
+    $attempts = (int)$this->data->get('attempts') + 1;
+
+    $this->data->erase('icons');
+    $this->data->erase('iconIds');
+    $this->data->sets([
+      'correctId' => 0,
+      'completed' => false,
+      'attempts' => $attempts,
+    ]);
+
     if ($attempts >= $this->config->getInt('attempts.amount') && $this->config->getInt('attempts.timeout') > 0) {
       $this->data->set('attemptsTimeout', time() + $this->config->getInt('attempts.timeout'));
     }
 
     $this->session->set($this->nS . '.' . $this->data->id, $this->data->all());
-    return false;
   }
 
   /**
