@@ -167,7 +167,7 @@ $config->loadFromFile('/path/to/config.yaml');
 
 - **CSRF token protection** - Configurable token-based protection
 - **Honeypot field** - Hidden field to detect bots
-- **Attempt limiting** - Configurable max attempts with timeout
+- **Attempt limiting** - Configurable max attempts with timeout; a wrong answer (a click or a form post) spends the puzzle, so each puzzle gets one try and the widget loads a new one
 - **Click delay** - Minimum delay between clicks to deter automation
 - **Hover detection** - Detects human mouse behavior
 - **Session expiration** - Captcha data expires after 30 minutes
@@ -190,6 +190,7 @@ composer test
 
 ## Changelog
 
+- **2.2.2** - **Security**: a wrong answer spends the puzzle. A wrong click (`setSelectedAnswer()`) or a wrong form post (`validate()`) drops the puzzle's icons and answer, so the same id answered again is refused (`validate()`: code 4, "Invalid Captcha ID"); the attempt is counted either way, and the widget's next puzzle carries the count and the lock. A bot gets one try per puzzle and `attempts.amount` puzzles per lock window. `SymfonySession::has()` reads a stored `null` as absent, like the Native and PSR adapters. No widget change: jizy-captcha already reloads a puzzle after a wrong answer.
 - **2.2.1** - Answers are refused while the captcha is locked out, and every wrong answer past the limit locks again; a malformed or out-of-range click is a wrong answer instead of a PHP error; session cleaning quotes the namespace.
 - **2.2.0** - `CaptchaHttpHandler::image()` maps unexpected failures to 400.
 - **2.1.0** - HTTP layer: `Http\CaptchaHttpHandler` + `Http\HttpResult`.
