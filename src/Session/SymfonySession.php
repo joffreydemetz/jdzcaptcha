@@ -23,9 +23,13 @@ class SymfonySession implements CaptchaSessionInterface
     $this->session->set($key, $value);
   }
 
+  /**
+   * Same meaning as the other adapters (isset): a stored null is absent.
+   * Symfony's own has() is array_key_exists().
+   */
   public function has(string $key): bool
   {
-    return $this->session->has($key);
+    return null !== $this->session->get($key);
   }
 
   public function remove(string $key): void
